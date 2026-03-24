@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Word Quiz - 매일 10단어</title>
+    <style>
+        :root { --primary: #4f46e5; --success: #22c55e; --bg: #f3f4f6; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 90%; max-width: 450px; background: white; padding: 2rem; border-radius: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        
+        .header { margin-bottom: 2rem; }
+        .streak-badge { background: #fee2e2; color: #ef4444; padding: 0.5rem 1rem; border-radius: 2rem; font-weight: bold; font-size: 0.9rem; }
+        
+        .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; margin: 1.5rem 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: 0.4s; }
+
+        .question { font-size: 2.2rem; font-weight: 800; color: #111827; margin-bottom: 2rem; }
+        .options { display: grid; gap: 0.8rem; }
+        .option-btn { background: white; border: 2px solid #e5e7eb; padding: 1rem; border-radius: 1rem; font-size: 1.1rem; cursor: pointer; transition: 0.2s; font-weight: 600; }
+        .option-btn:hover { border-color: var(--primary); background: #f5f3ff; }
+        .option-btn.correct { background: var(--success) !important; color: white; border-color: var(--success); }
+        .option-btn.wrong { background: #ef4444 !important; color: white; border-color: #ef4444; }
+
+        .result-screen { display: none; }
+        .share-btn { background: var(--primary); color: white; border: none; padding: 1rem 2rem; border-radius: 1rem; font-size: 1.1rem; cursor: pointer; width: 100%; margin-top: 1rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quiz-screen">
+        <div class="header">
+            <span class="streak-badge" id="streak-display">🔥 0일째 도전 중</span>
+            <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+        </div>
+        <div class="question" id="word-eng">Word</div>
+        <div class="options" id="options-container">
+            </div>
+    </div>
+
+    <div id="result-screen" class="result-screen">
+        <h2 style="font-size: 3rem;">🎉</h2>
+        <h2>오늘의 목표 달성!</h2>
+        <p id="final-streak-text">현재 1일 연속 학습 중입니다.</p>
+        <button class="share-btn" onclick="shareResult()">결과 공유하기</button>
+        <p style="font-size: 0.8rem; color: #6b7280; margin-top: 1rem;">내일 새로운 단어로 다시 만나요!</p>
+    </div>
+</div>
+
+<script>
+    // 1. 단어 데이터 (약 100개 정도 미리 넣어두면 좋습니다)
+    const wordDB = [
+        { eng: "Substantial", kor: "상당한" }, { eng: "Implement", kor: "시행하다" },
+        { eng: "Perspective", kor: "관점" }, { eng: "Inherent", kor: "내재된" },
+        { eng: "Infrastructure", kor: "기반 시설" }, { eng: "Versatile", kor: "다재다능한" },
+        { eng: "Collaborate", kor: "협력하다" }, { eng: "Prevalent", kor: "널리 퍼진" },
+        { eng: "Mitigate", kor: "완화하다" }, { eng: "Resilient", kor: "회복력 있는" },
+        { eng: "Optimize", kor: "최적화하다" }, { eng: "Sufficient", kor: "충분한" },
+        { eng: "Innovation", kor: "혁신" }, { eng: "Analyze", kor: "분석하다" },
+        { eng: "Consistent", kor: "일관된" }, { eng: "Specific", kor: "구체적인" }
+        // ... 데이터를 여기에 더 추가할 수 있습니다.
+    ];
+
+    let dailyWords = [];
+    let currentIndex = 0;
+    let streak = parseInt(localStorage.getItem('streak')) || 0;
+
+    // 2. 날짜 기반 고정 단어 추출 로직
+    function initDailyWords() {
+        const today = new Date();
+        const dateString = today.getFullYear() + "-" + (today.getMonth()+1) + "-" + today.getDate();
+        
+        // 날짜를 숫자로 변환하여 시드값 생성
+        let seed = dateString.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+        
+        const shuffled = [...wordDB].sort(() => {
+            seed = (seed * 9301 + 49297) % 233280;
+            return (seed / 233280) - 0.5;
+        });
+        dailyWords = shuffled.slice(0, 10);
+        
+        // 출석 체크 로직
+        const lastDate = localStorage.getItem('lastDate');
+        if (lastDate !== dateString) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayString = yesterday.getFullYear() + "-" + (yesterday.getMonth()+1) + "-" + yesterday.getDate();
+            
+            if (lastDate === yesterdayString) streak++;
+            else if (lastDate !== dateString) streak = 1;
+            
+            localStorage.setItem('streak', streak);
+            localStorage.setItem('lastDate', dateString);
+        }
+        document.getElementById('streak-display').innerText = `🔥 ${streak}일째 도전 중`;
+    }
+
+    function showQuiz() {
+        if (currentIndex >= 10) {
+            document.getElementById('quiz-screen').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('final-streak-text').innerText = `현재 ${streak}일 연속 학습 중입니다.`;
+            return;
+        }
+
+        const currentWord = dailyWords[currentIndex];
+        document.getElementById('word-eng').innerText = currentWord.eng;
+        document.getElementById('progress').style.width = `${(currentIndex / 10) * 100}%`;
+
+        // 오답 3개 무작위 추출
+        const others = wordDB.filter(w => w.eng !== currentWord.eng)
+                            .sort(() => Math.random() - 0.5)
+                            .slice(0, 3);
+        
+        const options = [...others, currentWord].sort(() => Math.random() - 0.5);
+        
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt.kor;
+            btn.onclick = () => checkAnswer(opt.eng === currentWord.eng, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(isCorrect, btn) {
+        if (isCorrect) {
+            btn.classList.add('correct');
+            setTimeout(() => {
+                currentIndex++;
+                showQuiz();
+            }, 600);
+        } else {
+            btn.classList.add('wrong');
+            btn.disabled = true;
+        }
+    }
+
+    function shareResult() {
+        const text = `[Daily Word] 오늘 10단어 암기 성공! 🔥 현재 ${streak}일째 연속 학습 중입니다. 같이 공부해요!`;
+        if (navigator.share) {
+            navigator.share({ title: 'Daily Word Quiz', text: text, url: window.location.href });
+        } else {
+            navigator.clipboard.writeText(`${text} \n ${window.location.href}`);
+            alert('결과가 클립보드에 복사되었습니다. 친구들에게 공유해 보세요!');
+        }
+    }
+
+    initDailyWords();
+    showQuiz();
+</script>
+
+</body>
+</html>
