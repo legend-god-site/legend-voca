@@ -3,25 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Word Quiz - 매일 10단어</title>
+    <title>Legend Voca - 매일 10단어 퀴즈</title>
     <style>
         :root { --primary: #4f46e5; --success: #22c55e; --bg: #f3f4f6; }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .container { width: 90%; max-width: 450px; background: white; padding: 2rem; border-radius: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
-        
         .header { margin-bottom: 2rem; }
         .streak-badge { background: #fee2e2; color: #ef4444; padding: 0.5rem 1rem; border-radius: 2rem; font-weight: bold; font-size: 0.9rem; }
-        
         .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; margin: 1.5rem 0; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: 0.4s; }
-
-        .question { font-size: 2.2rem; font-weight: 800; color: #111827; margin-bottom: 2rem; }
+        .question { font-size: 2.2rem; font-weight: 800; color: #111827; margin-bottom: 2rem; min-height: 60px; }
         .options { display: grid; gap: 0.8rem; }
         .option-btn { background: white; border: 2px solid #e5e7eb; padding: 1rem; border-radius: 1rem; font-size: 1.1rem; cursor: pointer; transition: 0.2s; font-weight: 600; }
         .option-btn:hover { border-color: var(--primary); background: #f5f3ff; }
         .option-btn.correct { background: var(--success) !important; color: white; border-color: var(--success); }
         .option-btn.wrong { background: #ef4444 !important; color: white; border-color: #ef4444; }
-
         .result-screen { display: none; }
         .share-btn { background: var(--primary); color: white; border: none; padding: 1rem 2rem; border-radius: 1rem; font-size: 1.1rem; cursor: pointer; width: 100%; margin-top: 1rem; font-weight: bold; }
     </style>
@@ -34,136 +30,49 @@
             <span class="streak-badge" id="streak-display">🔥 0일째 도전 중</span>
             <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
         </div>
-        <div class="question" id="word-eng">Word</div>
-        <div class="options" id="options-container">
-            </div>
+        <div class="question" id="word-eng">준비 중...</div>
+        <div class="options" id="options-container"></div>
     </div>
 
     <div id="result-screen" class="result-screen">
         <h2 style="font-size: 3rem;">🎉</h2>
         <h2>오늘의 목표 달성!</h2>
-        <p id="final-streak-text">현재 1일 연속 학습 중입니다.</p>
+        <p id="final-streak-text"></p>
         <button class="share-btn" onclick="shareResult()">결과 공유하기</button>
-        <p style="font-size: 0.8rem; color: #6b7280; margin-top: 1rem;">내일 새로운 단어로 다시 만나요!</p>
     </div>
 </div>
 
 <script>
-    // 1. 단어 데이터 (약 100개 정도 미리 넣어두면 좋습니다)
-   const wordDB = [
-    { eng: "Mandatory", kor: "의무적인, 필수의" },
-    { eng: "Submit", kor: "제출하다" },
-    { eng: "Coordinate", kor: "조정하다, 조직하다" },
-    { eng: "Exceed", kor: "초과하다, 넘어서다" },
-    { eng: "Complimentary", kor: "무료의, 칭찬하는" },
-    { eng: "Postpone", kor: "연기하다, 미루다" },
-    { eng: "Approve", kor: "승인하다, 찬성하다" },
-    { eng: "Candidate", kor: "후보자, 지원자" },
-    { eng: "Negotiate", kor: "협상하다" },
-    { eng: "Implement", kor: "시행하다, 이행하다" },
-    { eng: "Preliminary", kor: "예비의, 준비의" },
-    { eng: "Reliability", kor: "신뢰도, 확실성" },
-    { eng: "Significant", kor: "중요한, 상당한" },
-    { eng: "Establish", kor: "설립하다, 확립하다" },
-    { eng: "Authorized", kor: "권한을 부여받은" },
-    { eng: "Inventory", kor: "재고, 물품 목록" },
-    { eng: "Affordable", kor: "가격이 적당한" },
-    { eng: "Temporary", kor: "일시적인" },
-    { eng: "Promptly", kor: "즉시, 지체 없이" },
-    { eng: "Acquisition", kor: "인수, 습득" },
-    { eng: "Strategy", kor: "전략" },
-    { eng: "Procedure", kor: "절차, 순서" },
-    { eng: "Substantial", kor: "상당한, 실질적인" },
-    { eng: "Incentive", kor: "혜택, 장려금" },
-    { eng: "Prospective", kor: "장래의, 유망한" },
-    { eng: "Relevant", kor: "관련된, 적절한" },
-    { eng: "Accommodate", kor: "수용하다, 부응하다" },
-    { eng: "Consistent", kor: "일관된" },
-    { eng: "Maintenance", kor: "유지, 보수" },
-    { eng: "Contribute", kor: "기여하다, 원인이 되다" },
-    { eng: "Evaluate", kor: "평가하다" },
-    { eng: "Exceptional", kor: "예외적인, 뛰어난" },
-    { eng: "Fluctuate", kor: "변동하다, 오르내리다" },
-    { eng: "Innovative", kor: "혁신적인" },
-    { eng: "Minimize", kor: "최소화하다" },
-    { eng: "Personnel", kor: "직원, 인사과" },
-    { eng: "Redeem", kor: "교환하다, 만회하다" },
-    { eng: "Strive", kor: "노력하다, 애쓰다" },
-    { eng: "Urgent", kor: "긴급한" },
-    { eng: "Versatile", kor: "다재다능한, 다목적의" },
-    { eng: "Warranty", kor: "품질 보증" },
-    { eng: "Adjourn", kor: "중단하다, 휴회하다" },
-    { eng: "Collaborate", kor: "협력하다" },
-    { eng: "Demanding", kor: "까다로운, 요구가 많은" },
-    { eng: "Efficient", kor: "효율적인" },
-    { eng: "Feasible", kor: "실행 가능한" },
-    { eng: "Guarantee", kor: "보장하다, 보증" },
-    { eng: "Halt", kor: "중단, 멈춤" },
-    { eng: "Imply", kor: "암시하다, 의미하다" },
-    { eng: "Legitimate", kor: "합법적인, 타당한" },
-    { eng: "Modify", kor: "수정하다, 변경하다" },
-    { eng: "Notify", kor: "통지하다, 알리다" },
-    { eng: "Objective", kor: "목표, 객관적인" },
-    { eng: "Participation", kor: "참여" },
-    { eng: "Quality", kor: "품질, 특성" },
-    { eng: "Recruit", kor: "모집하다" },
-    { eng: "Specialize", kor: "전공하다, 전문화하다" },
-    { eng: "Transaction", kor: "거래" },
-    { eng: "Ultimate", kor: "최종적인, 궁극적인" },
-    { eng: "Vague", kor: "모호한" },
-    { eng: "Withdraw", kor: "철회하다, 인출하다" },
-    { eng: "Yield", kor: "산출하다, 양보하다" },
-    { eng: "Zealous", kor: "열성적인" },
-    { eng: "Anticipate", kor: "예상하다" },
-    { eng: "Brief", kor: "짧은, 보고하다" },
-    { eng: "Commence", kor: "시작되다" },
-    { eng: "Decrease", kor: "감소하다" },
-    { eng: "Eliminate", kor: "제거하다" },
-    { eng: "Frequent", kor: "빈번한" },
-    { eng: "Hesitate", kor: "망설이다" },
-    { eng: "Initial", kor: "처음의" },
-    { eng: "Justify", kor: "정당화하다" },
-    { eng: "Knowledgeable", kor: "아는 것이 많은" },
-    { eng: "Limited", kor: "제한된" },
-    { eng: "Magnificent", kor: "훌륭한" },
-    { eng: "Numerous", kor: "수많은" },
-    { eng: "Outline", kor: "개요를 서술하다" },
-    { eng: "Passive", kor: "수동적인" },
-    { eng: "Reduce", kor: "줄이다" },
-    { eng: "Satisfactory", kor: "만족스러운" },
-    { eng: "Thorough", kor: "철저한" },
-    { eng: "Utilize", kor: "이용하다" },
-    { eng: "Vacant", kor: "비어 있는" },
-    { eng: "Willingness", kor: "기꺼이 하는 마음" },
-    { eng: "Analyze", kor: "분석하다" },
-    { eng: "Benefit", kor: "이익, 혜택" },
-    { eng: "Capacity", kor: "용량, 능력" },
-    { eng: "Development", kor: "개발" },
-    { eng: "Equipment", kor: "장비" },
-    { eng: "Flexible", kor: "유연한" },
-    { eng: "Generate", kor: "발생시키다" },
-    { eng: "Handle", kor: "다루다, 처리하다" },
-    { eng: "Inquiry", kor: "문의" },
-    { eng: "Judgment", kor: "판단" },
-    { eng: "Lease", kor: "임대" },
-    { eng: "Monitor", kor: "감시하다, 추적하다" },
-    { eng: "Necessity", kor: "필수품" },
-    { eng: "Opportunity", kor: "기회" },
-    { eng: "Permission", kor: "허가" },
-    { eng: "Reference", kor: "추천서, 참고" }
-];// ... 데이터를 여기에 더 추가할 수 있습니다.
+    const wordDB = [
+        { eng: "Mandatory", kor: "의무적인, 필수의" }, { eng: "Submit", kor: "제출하다" }, { eng: "Coordinate", kor: "조정하다" }, { eng: "Exceed", kor: "초과하다" }, { eng: "Complimentary", kor: "무료의" },
+        { eng: "Postpone", kor: "연기하다" }, { eng: "Approve", kor: "승인하다" }, { eng: "Candidate", kor: "후보자" }, { eng: "Negotiate", kor: "협상하다" }, { eng: "Implement", kor: "시행하다" },
+        { eng: "Preliminary", kor: "예비의" }, { eng: "Reliability", kor: "신뢰도" }, { eng: "Significant", kor: "중요한" }, { eng: "Establish", kor: "설립하다" }, { eng: "Authorized", kor: "권한을 부여받은" },
+        { eng: "Inventory", kor: "재고" }, { eng: "Affordable", kor: "가격이 적당한" }, { eng: "Temporary", kor: "일시적인" }, { eng: "Promptly", kor: "즉시" }, { eng: "Acquisition", kor: "인수" },
+        { eng: "Strategy", kor: "전략" }, { eng: "Procedure", kor: "절차" }, { eng: "Substantial", kor: "상당한" }, { eng: "Incentive", kor: "혜택" }, { eng: "Prospective", kor: "장래의" },
+        { eng: "Relevant", kor: "관련된" }, { eng: "Accommodate", kor: "수용하다" }, { eng: "Consistent", kor: "일관된" }, { eng: "Maintenance", kor: "유지보수" }, { eng: "Contribute", kor: "기여하다" },
+        { eng: "Evaluate", kor: "평가하다" }, { eng: "Exceptional", kor: "뛰어난" }, { eng: "Fluctuate", kor: "변동하다" }, { eng: "Innovative", kor: "혁신적인" }, { eng: "Minimize", kor: "최소화하다" },
+        { eng: "Personnel", kor: "직원" }, { eng: "Redeem", kor: "교환하다" }, { eng: "Strive", kor: "노력하다" }, { eng: "Urgent", kor: "긴급한" }, { eng: "Versatile", kor: "다재다능한" },
+        { eng: "Warranty", kor: "품질 보증" }, { eng: "Adjourn", kor: "중단하다" }, { eng: "Collaborate", kor: "협력하다" }, { eng: "Demanding", kor: "까다로운" }, { eng: "Efficient", kor: "효율적인" },
+        { eng: "Feasible", kor: "실행 가능한" }, { eng: "Guarantee", kor: "보장하다" }, { eng: "Halt", kor: "중단" }, { eng: "Imply", kor: "암시하다" }, { eng: "Legitimate", kor: "합법적인" },
+        { eng: "Modify", kor: "수정하다" }, { eng: "Notify", kor: "통지하다" }, { eng: "Objective", kor: "목표" }, { eng: "Participation", kor: "참여" }, { eng: "Quality", kor: "품질" },
+        { eng: "Recruit", kor: "모집하다" }, { eng: "Specialize", kor: "전공하다" }, { eng: "Transaction", kor: "거래" }, { eng: "Ultimate", kor: "최종적인" }, { eng: "Vague", kor: "모호한" },
+        { eng: "Withdraw", kor: "철회하다" }, { eng: "Yield", kor: "산출하다" }, { eng: "Zealous", kor: "열성적인" }, { eng: "Anticipate", kor: "예상하다" }, { eng: "Brief", kor: "짧은" },
+        { eng: "Commence", kor: "시작하다" }, { eng: "Decrease", kor: "감소하다" }, { eng: "Eliminate", kor: "제거하다" }, { eng: "Frequent", kor: "빈번한" }, { eng: "Hesitate", kor: "망설이다" },
+        { eng: "Initial", kor: "처음의" }, { eng: "Justify", kor: "정당화하다" }, { eng: "Knowledgeable", kor: "박식한" }, { eng: "Limited", kor: "제한된" }, { eng: "Magnificent", kor: "훌륭한" },
+        { eng: "Numerous", kor: "수많은" }, { eng: "Outline", kor: "개요" }, { eng: "Passive", kor: "수동적인" }, { eng: "Reduce", kor: "줄이다" }, { eng: "Satisfactory", kor: "만족스러운" },
+        { eng: "Thorough", kor: "철저한" }, { eng: "Utilize", kor: "이용하다" }, { eng: "Vacant", kor: "비어있는" }, { eng: "Willingness", kor: "기꺼이 함" }, { eng: "Analyze", kor: "분석하다" },
+        { eng: "Benefit", kor: "이득" }, { eng: "Capacity", kor: "수용력" }, { eng: "Development", kor: "개발" }, { eng: "Equipment", kor: "장비" }, { eng: "Flexible", kor: "유연한" },
+        { eng: "Generate", kor: "발생시키다" }, { eng: "Handle", kor: "다루다" }, { eng: "Inquiry", kor: "문의" }, { eng: "Judgment", kor: "판단" }, { eng: "Lease", kor: "임대" },
+        { eng: "Monitor", kor: "감시하다" }, { eng: "Necessity", kor: "필수품" }, { eng: "Opportunity", kor: "기회" }, { eng: "Permission", kor: "허가" }, { eng: "Reference", kor: "추천서" }
     ];
 
     let dailyWords = [];
     let currentIndex = 0;
     let streak = parseInt(localStorage.getItem('streak')) || 0;
 
-    // 2. 날짜 기반 고정 단어 추출 로직
     function initDailyWords() {
         const today = new Date();
         const dateString = today.getFullYear() + "-" + (today.getMonth()+1) + "-" + today.getDate();
-        
-        // 날짜를 숫자로 변환하여 시드값 생성
         let seed = dateString.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
         
         const shuffled = [...wordDB].sort(() => {
@@ -172,15 +81,14 @@
         });
         dailyWords = shuffled.slice(0, 10);
         
-        // 출석 체크 로직
         const lastDate = localStorage.getItem('lastDate');
         if (lastDate !== dateString) {
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayString = yesterday.getFullYear() + "-" + (yesterday.getMonth()+1) + "-" + yesterday.getDate();
+            const yesterdayStr = yesterday.getFullYear() + "-" + (yesterday.getMonth()+1) + "-" + yesterday.getDate();
             
-            if (lastDate === yesterdayString) streak++;
-            else if (lastDate !== dateString) streak = 1;
+            if (lastDate === yesterdayStr) streak++;
+            else streak = 1;
             
             localStorage.setItem('streak', streak);
             localStorage.setItem('lastDate', dateString);
@@ -200,12 +108,8 @@
         document.getElementById('word-eng').innerText = currentWord.eng;
         document.getElementById('progress').style.width = `${(currentIndex / 10) * 100}%`;
 
-        // 오답 3개 무작위 추출
-        const others = wordDB.filter(w => w.eng !== currentWord.eng)
-                            .sort(() => Math.random() - 0.5)
-                            .slice(0, 3);
-        
-        const options = [...others, currentWord].sort(() => Math.random() - 0.5);
+        let others = wordDB.filter(w => w.eng !== currentWord.eng).sort(() => 0.5 - Math.random()).slice(0, 3);
+        let options = [...others, currentWord].sort(() => 0.5 - Math.random());
         
         const container = document.getElementById('options-container');
         container.innerHTML = '';
@@ -213,37 +117,31 @@
             const btn = document.createElement('button');
             btn.className = 'option-btn';
             btn.innerText = opt.kor;
-            btn.onclick = () => checkAnswer(opt.eng === currentWord.eng, btn);
+            btn.onclick = () => {
+                if (opt.eng === currentWord.eng) {
+                    btn.classList.add('correct');
+                    setTimeout(() => { currentIndex++; showQuiz(); }, 500);
+                } else {
+                    btn.classList.add('wrong');
+                    btn.disabled = true;
+                }
+            };
             container.appendChild(btn);
         });
     }
 
-    function checkAnswer(isCorrect, btn) {
-        if (isCorrect) {
-            btn.classList.add('correct');
-            setTimeout(() => {
-                currentIndex++;
-                showQuiz();
-            }, 600);
-        } else {
-            btn.classList.add('wrong');
-            btn.disabled = true;
-        }
-    }
-
     function shareResult() {
-        const text = `[Daily Word] 오늘 10단어 암기 성공! 🔥 현재 ${streak}일째 연속 학습 중입니다. 같이 공부해요!`;
+        const text = `🔥 [Legend Voca] 오늘 10단어 암기 성공! 현재 ${streak}일째 연속 학습 중입니다!`;
+        const url = window.location.href;
         if (navigator.share) {
-            navigator.share({ title: 'Daily Word Quiz', text: text, url: window.location.href });
+            navigator.share({ title: 'Legend Voca', text: text, url: url });
         } else {
-            navigator.clipboard.writeText(`${text} \n ${window.location.href}`);
-            alert('결과가 클립보드에 복사되었습니다. 친구들에게 공유해 보세요!');
+            alert('복사되었습니다: ' + text);
         }
     }
 
     initDailyWords();
     showQuiz();
 </script>
-
 </body>
 </html>
